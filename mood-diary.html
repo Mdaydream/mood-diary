@@ -766,8 +766,52 @@ function renderHistory(todayEntry) {
 }
 
 // ===== 初始化 =====
+const SUPABASE_URL = "https://fqvqwhqyrpzernlqfnqp.supabase.co";
+const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZxdnF3aHF5cnB6ZXJubHFmbnFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2NzkyNDksImV4cCI6MjA5MDI1NTI0OX0.CUhS4H2bHlk_4OWvjjMIkKa_CmugBF9pop5GNbcA1wI";
+
+async function syncToCloud() {
+  const entry = entries.find(e => e.date === today());
+  if (!entry) return;
+  await fetch(`${SUPABASE_URL}/rest/v1/mood_entries`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "apikey": SUPABASE_KEY,
+      "Authorization": `Bearer ${SUPABASE_KEY}`,
+      "Prefer": "resolution=merge-duplicates"
+    },
+    body: JSON.stringify({
+      date: entry.date, score: entry.score, tags: entry.tags,
+      note: entry.note, ai_mood: entry.aiMood, ts: entry.ts
+    })
+  });
+}
+
+async function loadFromCloud() {
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/mood_entries?select=*&order=date.desc`, {
+      headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+    });
+    const data = await res.json();
+    if (data && data.length > 0) {
+      entries = data.map(r => ({
+        date: r.date, score: r.score, tags: r.tags || [],
+        note: r.note || "", aiMood: r.ai_mood, ts: r.ts
+      }));
+      saveData();
+    }
+  } catch(e) { console.error(e); }
+}
+
+// 改写saveEntry，保存后同步云端
+const _origSaveEntry = saveEntry;
+saveEntry = async function() {
+  _origSaveEntry();
+  await syncToCloud();
+};
+
 loadData();
-render();
+loadFromCloud().then(() => render());
 
 // 预加载今天已有的记录到表单
 window.addEventListener("DOMContentLoaded", () => {
