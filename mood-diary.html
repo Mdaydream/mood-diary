@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="情绪日记">
+<meta name="theme-color" content="#0f1117">
+<title>情绪日记</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+:root {
+  --bg: #0f1117;
+  --bg2: #161b27;
+  --bg3: #1e2535;
+  --border: #2a3348;
+  --accent: #4f8eff;
+  --green: #34d399;
+  --pink: #f472b6;
+  --yellow: #fbbf24;
+  --purple: #a78bfa;
+  --teal: #2dd4bf;
+  --text: #e2e8f0;
+  --text2: #8899bb;
+  --text3: #4a5a7a;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: env(safe-area-inset-top, 0px);
+}
+
+html, body {
+  height: 100%; height: 100dvh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, 'PingFang SC', 'Noto Sans SC', sans-serif;
+  overflow: hidden;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%; height: 100dvh;
+}
+
+/* 顶栏 */
+.topbar {
+  padding: calc(var(--safe-top) + 12px) 18px 12px;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.topbar-logo { font-size: 22px; }
+.topbar-title { font-size: 17px; font-weight: 700; }
+.topbar-sub { font-size: 11px; color: var(--text3); }
+.topbar-count { margin-left: auto; font-size: 12px; color: var(--text2); }
+.topbar-count span { color: var(--accent); font-weight: 600; }
+
+/* 滚动内容区 */
+.scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+  padding-bottom: calc(var(--safe-bottom) + 80px);
+}
+
+/* 底部导航 */
+.bottom-nav {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  display: flex;
+  padding-bottom: var(--safe-bottom);
+  flex-shrink: 0;
+  z-index: 100;
+}
+.nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 10px 0 8px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.nav-item.active .nav-icon { color: var(--accent); }
+.nav-item.active .nav-label { color: var(--accent); }
+.nav-icon { font-size: 22px; transition: transform .15s; }
+.nav-item.active .nav-icon { transform: scale(1.1); }
+.nav-label { font-size: 10px; color: var(--text3); font-weight: 500; }
+
+/* 卡片 */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.card-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  margin-bottom: 12px;
+}
+
+/* 分数选择 */
+.score-display {
+  text-align: center;
+  margin-bottom: 16px;
+}
+.score-num {
+  font-size: 64px;
+  font-weight: 800;
+  line-height: 1;
+  transition: color .2s;
+}
+.score-word {
+  font-size: 16px;
+  color: var(--text2);
+  margin-top: 4px;
+}
+.score-slider {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--bg3);
+  outline: none;
+  margin: 8px 0;
+}
+.score-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(79,142,255,.4);
+  transition: background .2s;
+}
+.score-dots {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+.score-dot { font-size: 10px; color: var(--text3); }
+
+/* 标签 */
+.tags-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.tag-btn {
+  padding: 10px 8px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  border: 1.5px solid var(--border);
+  background: var(--bg3);
+  color: var(--text2);
+  cursor: pointer;
+  text-align: center;
+  transition: all .15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.tag-btn.active { border-width: 1.5px; }
+.tag-icon { font-size: 18px; }
+
+/* 文本输入 */
+.note-input {
+  width: 100%;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+  min-height: 90px;
+  -webkit-appearance: none;
+}
+.note-input::placeholder { color: var(--text3); }
+.note-input:focus { border-color: var(--accent); }
+
+/* AI 结果 */
+.ai-result {
+  margin-top: 10px;
+  background: #0a2a1a;
+  border: 1px solid #1a5a2a;
+  border-radius: 10px;
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: fadeIn .3s ease;
+}
+@keyframes fadeIn { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
+.ai-emoji { font-size: 28px; }
+.ai-emotion { font-size: 14px; color: var(--green); font-weight: 600; }
+.ai-reply { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.ai-suggest { margin-left: auto; font-size: 11px; color: var(--text3); text-align: center; flex-shrink: 0; }
+.ai-suggest-num { font-size: 18px; font-weight: 700; display: block; }
+
+/* 按钮 */
+.btn-save {
+  width: 100%;
+  padding: 16px;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: inherit;
+  margin-top: 4px;
+}
+.btn-save:active { transform: scale(.97); }
+.btn-save.saved { background: #1a5a2a; color: var(--green); }
+.btn-save:disabled { background: var(--bg3); color: var(--text3); }
+
+.btn-ai {
+  margin-top: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  background: #1a2a4a;
+  color: var(--accent);
+  border: 1px solid #2a4a7a;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.btn-ai:active { transform: scale(.96); }
+
+/* 今日已记录提示 */
+.today-banner {
+  background: #0a2a1a;
+  border: 1px solid #1a5a2a;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 统计页 */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 10px;
+  text-align: center;
+}
+.stat-val { font-size: 26px; font-weight: 800; line-height: 1; }
+.stat-key { font-size: 10px; color: var(--text3); margin-top: 4px; }
+.stat-sub { font-size: 11px; color: var(--text2); margin-top: 2px; }
+
+/* 图表 */
+.chart-wrap { overflow-x: auto; padding-bottom: 4px; }
+
+/* 标签影响 */
+.tag-impact-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.tag-impact-label { font-size: 13px; width: 36px; flex-shrink: 0; }
+.tag-impact-bar-bg { flex: 1; height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+.tag-impact-bar { height: 100%; border-radius: 4px; transition: width .4s ease; }
+.tag-impact-score { font-size: 12px; color: var(--text2); width: 26px; text-align: right; flex-shrink: 0; }
+.tag-impact-diff { font-size: 11px; width: 32px; flex-shrink: 0; }
+.tag-impact-cnt { font-size: 10px; color: var(--text3); width: 20px; text-align: right; flex-shrink: 0; }
+
+/* 高低点 */
+.highlight-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.highlight-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+}
+.highlight-score { font-size: 28px; font-weight: 800; }
+.highlight-date { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.highlight-note { font-size: 11px; color: var(--text3); margin-top: 8px; line-height: 1.5; border-top: 1px solid var(--border); padding-top: 8px; }
+
+/* 进步卡片 */
+.progress-card {
+  background: var(--bg2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.progress-icon { font-size: 28px; }
+.progress-text { font-size: 14px; font-weight: 600; }
+.progress-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+/* 历史页 */
+.history-item {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+  animation: fadeIn .2s ease;
+}
+.history-item.today { border-color: var(--accent); }
+.history-header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.history-score { font-size: 26px; font-weight: 800; line-height: 1; }
+.history-info { flex: 1; }
+.history-word { font-size: 13px; color: var(--text2); }
+.history-date { font-size: 11px; color: var(--text3); }
+.history-emotion { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: #0a2a1a; color: var(--green); border: 1px solid #1a5a2a; flex-shrink: 0; }
+.history-tags { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 6px; }
+.history-tag { font-size: 10px; padding: 2px 8px; border-radius: 10px; font-weight: 500; }
+.history-note { font-size: 13px; color: var(--text2); line-height: 1.6; border-top: 1px solid var(--border); padding-top: 8px; }
+.history-ai-reply { font-size: 11px; color: var(--text3); margin-top: 5px; font-style: italic; }
+
+/* 空状态 */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text3);
+  text-align: center;
+  gap: 10px;
+}
+.empty-icon { font-size: 48px; opacity: .4; }
+.empty-text { font-size: 15px; }
+.empty-sub { font-size: 12px; opacity: .6; }
+
+/* loading spinner */
+.spinner {
+  display: inline-block;
+  width: 14px; height: 14px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <span class="topbar-logo">🌱</span>
+    <div>
+      <div class="topbar-title">情绪日记</div>
+      <div class="topbar-sub">用数据看见自己的成长</div>
+    </div>
+    <div class="topbar-count" id="topbar-count" style="display:none">
+      已记录 <span id="total-days">0</span> 天
+    </div>
+  </div>
+
+  <div class="scroll-area" id="scroll-area">
+    <!-- 内容由JS渲染 -->
+  </div>
+
+  <nav class="bottom-nav">
+    <div class="nav-item active" onclick="switchTab('record')" id="nav-record">
+      <span class="nav-icon">✏️</span>
+      <span class="nav-label">记录</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('stats')" id="nav-stats">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">统计</span>
+    </div>
+    <div class="nav-item" onclick="switchTab('history')" id="nav-history">
+      <span class="nav-icon">📅</span>
+      <span class="nav-label">历史</span>
+    </div>
+  </nav>
+</div>
+
+<script>
+// ===== 数据 =====
+const TAGS = [
+  { id:"work",   label:"工作", icon:"💼", color:"#4f8eff", bg:"#0f2a4a" },
+  { id:"love",   label:"感情", icon:"💕", color:"#f472b6", bg:"#2a0a1a" },
+  { id:"body",   label:"身体", icon:"🌿", color:"#34d399", bg:"#0a2a1a" },
+  { id:"social", label:"人际", icon:"👥", color:"#fbbf24", bg:"#2a1a0a" },
+  { id:"growth", label:"成长", icon:"⭐", color:"#a78bfa", bg:"#1a0a2a" },
+  { id:"life",   label:"生活", icon:"🏠", color:"#2dd4bf", bg:"#0a2a2a" },
+];
+const SCORE_LABELS = {1:"很糟",2:"不好",3:"一般",4:"不错",5:"还行",6:"开心",7:"不错",8:"很棒",9:"超棒",10:"完美"};
+const SCORE_COLORS = {
+  1:"#ff4444",2:"#ff6b6b",3:"#ff9966",4:"#ffcc44",5:"#ffdd66",
+  6:"#aadd44",7:"#66cc44",8:"#44bb66",9:"#33aa88",10:"#4f8eff"
+};
+const SCORE_EMOJI = {1:"😞",2:"😔",3:"😐",4:"🙂",5:"😊",6:"😄",7:"😁",8:"🤩",9:"✨",10:"🌟"};
+
+let entries = [];
+let curTab = "record";
+let formState = { score: 7, tags: [], note: "", aiMood: null, saving: false, saved: false, aiLoading: false };
+
+// ===== 存储 =====
+function loadData() {
+  try { entries = JSON.parse(localStorage.getItem("mood-entries") || "[]"); } catch { entries = []; }
+}
+function saveData() {
+  localStorage.setItem("mood-entries", JSON.stringify(entries));
+}
+
+// ===== 工具 =====
+function today() { return new Date().toISOString().slice(0,10); }
+function yesterday() { return new Date(Date.now()-86400000).toISOString().slice(0,10); }
+
+// ===== Tab切换 =====
+function switchTab(tab) {
+  curTab = tab;
+  document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
+  document.getElementById("nav-"+tab).classList.add("active");
+  document.getElementById("scroll-area").scrollTop = 0;
+  render();
+}
+
+// ===== 渲染 =====
+function render() {
+  const todayEntry = entries.find(e=>e.date===today());
+  const totalDays = entries.length;
+  if (totalDays > 0) {
+    document.getElementById("topbar-count").style.display = "";
+    document.getElementById("total-days").textContent = totalDays;
+  }
+
+  if (curTab === "record") renderRecord(todayEntry);
+  else if (curTab === "stats") renderStats();
+  else renderHistory(todayEntry);
+}
+
+// ===== 记录页 =====
+function renderRecord(todayEntry) {
+  const { score, tags, note, aiMood, saving, saved, aiLoading } = formState;
+  const col = SCORE_COLORS[score];
+
+  let html = "";
+
+  if (todayEntry) {
+    html += `<div class="today-banner">✓ 今天已记录（${todayEntry.score}分），可以修改</div>`;
+  }
+
+  // 分数
+  html += `<div class="card">
+    <div class="card-label">今天心情</div>
+    <div class="score-display">
+      <div class="score-num" style="color:${col}">${SCORE_EMOJI[score]} ${score}</div>
+      <div class="score-word">${SCORE_LABELS[score]}</div>
+    </div>
+    <input type="range" class="score-slider" min="1" max="10" value="${score}"
+      oninput="formState.score=+this.value;render()"
+      style="background:linear-gradient(to right,${col} ${(score-1)/9*100}%,var(--bg3) ${(score-1)/9*100}%)">
+    <div class="score-dots">
+      <span class="score-dot">1</span><span class="score-dot">5</span><span class="score-dot">10</span>
+    </div>
+  </div>`;
+
+  // 标签
+  html += `<div class="card">
+    <div class="card-label">和什么有关</div>
+    <div class="tags-grid">`;
+  TAGS.forEach(t => {
+    const active = tags.includes(t.id);
+    html += `<div class="tag-btn ${active?"active":""}"
+      style="${active?`border-color:${t.color};background:${t.bg};color:${t.color}`:""}"
+      onclick="toggleTag('${t.id}')">
+      <span class="tag-icon">${t.icon}</span>
+      <span>${t.label}</span>
+    </div>`;
+  });
+  html += `</div></div>`;
+
+  // 记录一句话
+  html += `<div class="card">
+    <div class="card-label">说说今天</div>
+    <textarea class="note-input" id="note-input" placeholder="今天发生了什么？有什么感受？一句话就够..." oninput="formState.note=this.value" onblur="onNoteBlur()">${note}</textarea>`;
+
+  if (note.trim().length > 4 && !aiMood) {
+    html += `<button class="btn-ai" onclick="analyzeNote()">
+      ${aiLoading?'<span class="spinner"></span>分析中...':'✨ AI 分析情绪'}
+    </button>`;
+  }
+
+  if (aiMood) {
+    const emoji = aiMood.suggest>=8?"😊":aiMood.suggest>=6?"🙂":aiMood.suggest>=4?"😐":"😔";
+    html += `<div class="ai-result">
+      <div class="ai-emoji">${emoji}</div>
+      <div>
+        <div class="ai-emotion">${aiMood.emotion}</div>
+        <div class="ai-reply">${aiMood.reply}</div>
+      </div>
+      ${aiMood.suggest !== score ? `<div class="ai-suggest"><span class="ai-suggest-num" style="color:${SCORE_COLORS[aiMood.suggest]}">${aiMood.suggest}</span>AI建议</div>`:''}
+    </div>`;
+  }
+  html += `</div>`;
+
+  // 保存按钮
+  html += `<button class="btn-save ${saved?"saved":""}" onclick="saveEntry()" ${saving?"disabled":""}>
+    ${saving?'<span class="spinner"></span>保存中...':saved?"✓ 已保存，为自己鼓个掌 👏":"保存今天"}
+  </button>`;
+
+  document.getElementById("scroll-area").innerHTML = html;
+}
+
+function toggleTag(id) {
+  const idx = formState.tags.indexOf(id);
+  if (idx >= 0) formState.tags.splice(idx, 1);
+  else formState.tags.push(id);
+  render();
+}
+
+function onNoteBlur() {
+  const val = document.getElementById("note-input")?.value || "";
+  formState.note = val;
+  if (val.trim().length > 4 && !formState.aiMood) analyzeNote();
+}
+
+async function analyzeNote() {
+  if (formState.aiLoading) return;
+  formState.aiLoading = true;
+  render();
+  try {
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        model:"claude-sonnet-4-20250514",
+        max_tokens:200,
+        messages:[{role:"user",content:`分析这句话的情绪，给出：1.情绪词（2-4字）2.建议分数（1-10）3.一句温暖回应（15字内）。只输出JSON：{"emotion":"开心","suggest":8,"reply":"你今天做得很好"}\n话："${formState.note}"`}]
+      })
+    });
+    const json = await res.json();
+    const text = json.content?.map(b=>b.text||"").join("") || "";
+    const match = text.match(/\{[\s\S]*\}/);
+    if (match) {
+      const parsed = JSON.parse(match[0]);
+      formState.aiMood = parsed;
+      if (parsed.suggest) formState.score = Math.min(10, Math.max(1, parsed.suggest));
+    }
+  } catch(e) { console.error(e); }
+  formState.aiLoading = false;
+  render();
+}
+
+function saveEntry() {
+  formState.saving = true;
+  render();
+  const entry = {
+    date: today(),
+    score: formState.score,
+    tags: [...formState.tags],
+    note: formState.note,
+    aiMood: formState.aiMood,
+    ts: Date.now()
+  };
+  const idx = entries.findIndex(e=>e.date===today());
+  if (idx >= 0) entries[idx] = entry;
+  else entries.push(entry);
+  saveData();
+  formState.saving = false;
+  formState.saved = true;
+  render();
+  setTimeout(() => { formState.saved = false; render(); }, 2500);
+}
+
+// ===== 统计页 =====
+function renderStats() {
+  if (entries.length === 0) {
+    document.getElementById("scroll-area").innerHTML = `<div class="empty">
+      <div class="empty-icon">📊</div>
+      <div class="empty-text">还没有记录</div>
+      <div class="empty-sub">去记录今天的心情，数据会在这里出现</div>
+    </div>`;
+    return;
+  }
+
+  const avg = (entries.reduce((s,e)=>s+e.score,0)/entries.length);
+  const sorted = [...entries].sort((a,b)=>a.date.localeCompare(b.date));
+  const high = entries.reduce((a,b)=>a.score>=b.score?a:b);
+  const low = entries.reduce((a,b)=>a.score<=b.score?a:b);
+  const todayE = entries.find(e=>e.date===today());
+  const yestE = entries.find(e=>e.date===yesterday());
+  const progress = todayE && yestE ? todayE.score - yestE.score : null;
+
+  let html = "";
+
+  // 今日进步
+  if (progress !== null) {
+    const isUp = progress >= 0;
+    html += `<div class="progress-card" style="border:1px solid ${isUp?"#1a5a2a":"#5a2a2a"}">
+      <div class="progress-icon">${isUp?"🌱":"💪"}</div>
+      <div>
+        <div class="progress-text" style="color:${isUp?"#34d399":"#ff6b6b"}">${isUp?"比昨天好了 +"+progress:"比昨天少了 "+progress}</div>
+        <div class="progress-sub">${isUp?"继续保持，你在进步":"每一天都算数，明天会更好"}</div>
+      </div>
+    </div>`;
+  }
+
+  // 概览
+  html += `<div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-val" style="color:${SCORE_COLORS[Math.round(avg)]}">${avg.toFixed(1)}</div>
+      <div class="stat-key">平均心情</div>
+      <div class="stat-sub">${SCORE_LABELS[Math.round(avg)]}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:#34d399">${entries.length}</div>
+      <div class="stat-key">累计天数</div>
+      <div class="stat-sub">持续记录</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:#a78bfa">${entries.filter(e=>e.score>=7).length}</div>
+      <div class="stat-key">好心情天</div>
+      <div class="stat-sub">7分以上</div>
+    </div>
+  </div>`;
+
+  // 走势图
+  html += `<div class="card">
+    <div class="card-label">情绪走势（最近14天）</div>
+    ${renderChart(sorted.slice(-14))}
+  </div>`;
+
+  // 标签影响
+  const tagStats = {};
+  TAGS.forEach(t => { tagStats[t.id] = { sum:0, count:0, tag:t }; });
+  entries.forEach(e => (e.tags||[]).forEach(tid => {
+    if (tagStats[tid]) { tagStats[tid].sum+=e.score; tagStats[tid].count++; }
+  }));
+  const withData = Object.values(tagStats).filter(s=>s.count>0)
+    .map(s=>({...s,avg:s.sum/s.count})).sort((a,b)=>b.count-a.count);
+
+  if (withData.length > 0) {
+    html += `<div class="card"><div class="card-label">各类事对我的影响</div>`;
+    const maxCnt = Math.max(...withData.map(s=>s.count));
+    withData.forEach(s => {
+      const diff = s.avg - avg;
+      const bw = (s.count/maxCnt*100).toFixed(0);
+      html += `<div class="tag-impact-row">
+        <div class="tag-impact-label" style="color:${s.tag.color}">${s.tag.icon} ${s.tag.label}</div>
+        <div class="tag-impact-bar-bg"><div class="tag-impact-bar" style="width:${bw}%;background:${s.tag.color}66"></div></div>
+        <div class="tag-impact-score">${s.avg.toFixed(1)}</div>
+        <div class="tag-impact-diff" style="color:${diff>0?"#34d399":diff<0?"#ff6b6b":"#4a5a7a"}">${diff>0?"+":""}${diff.toFixed(1)}</div>
+        <div class="tag-impact-cnt">${s.count}次</div>
+      </div>`;
+    });
+    html += `<div style="font-size:10px;color:var(--text3);margin-top:4px">差值相对整体均值 ${avg.toFixed(1)}</div></div>`;
+  }
+
+  // 高低点
+  html += `<div class="card"><div class="card-label">值得记住的时刻</div>
+    <div class="highlight-cards">
+      <div class="highlight-card" style="border-color:#34d39944">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:6px">🏆 最好的一天</div>
+        <div class="highlight-score" style="color:${SCORE_COLORS[high.score]}">${high.score}分</div>
+        <div class="highlight-date">${high.date}</div>
+        ${high.note?`<div class="highlight-note">"${high.note.slice(0,35)}${high.note.length>35?"...":""}"</div>`:""}
+      </div>
+      <div class="highlight-card" style="border-color:#ff6b6b44">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:6px">💪 最难的一天</div>
+        <div class="highlight-score" style="color:${SCORE_COLORS[low.score]}">${low.score}分</div>
+        <div class="highlight-date">${low.date}</div>
+        ${low.note?`<div class="highlight-note">"${low.note.slice(0,35)}${low.note.length>35?"...":""}"</div>`:""}
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById("scroll-area").innerHTML = html;
+}
+
+function renderChart(recent) {
+  if (recent.length < 2) return `<div style="height:80px;display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:12px">至少记录2天后显示走势</div>`;
+  const W=320, H=80, pad=16;
+  const scores = recent.map(e=>e.score);
+  const minS=Math.min(...scores), maxS=Math.max(...scores), range=maxS-minS||1;
+  const pts = recent.map((e,i)=>({
+    x: pad+(i/(recent.length-1))*(W-pad*2),
+    y: pad+(1-(e.score-minS)/range)*(H-pad*2),
+    e
+  }));
+  const path = pts.map((p,i)=>`${i===0?"M":"L"}${p.x},${p.y}`).join(" ");
+  const area = path+` L${pts[pts.length-1].x},${H} L${pts[0].x},${H} Z`;
+  const circles = pts.map(p=>`<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="${SCORE_COLORS[p.e.score]}" stroke="#0f1117" stroke-width="1.5"/>`).join("");
+  const labels = pts.filter((_,i)=>i===0||i===pts.length-1||i%Math.ceil(recent.length/4)===0)
+    .map(p=>`<text x="${p.x}" y="${H+10}" text-anchor="middle" font-size="8" fill="#4a5a7a">${p.e.date.slice(5)}</text>`).join("");
+  return `<div class="chart-wrap"><svg width="100%" viewBox="0 0 ${W} ${H+14}" style="overflow:visible">
+    <defs><linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4f8eff" stop-opacity=".25"/><stop offset="100%" stop-color="#4f8eff" stop-opacity="0"/></linearGradient></defs>
+    <path d="${area}" fill="url(#ag)"/>
+    <path d="${path}" fill="none" stroke="#4f8eff" stroke-width="2" stroke-linejoin="round"/>
+    ${circles}${labels}
+  </svg></div>`;
+}
+
+// ===== 历史页 =====
+function renderHistory(todayEntry) {
+  const sorted = [...entries].sort((a,b)=>b.date.localeCompare(a.date));
+  if (sorted.length === 0) {
+    document.getElementById("scroll-area").innerHTML = `<div class="empty">
+      <div class="empty-icon">📅</div>
+      <div class="empty-text">还没有记录</div>
+      <div class="empty-sub">每天的心情都值得被记录</div>
+    </div>`;
+    return;
+  }
+
+  let html = sorted.map(e => {
+    const isToday = e.date === today();
+    const tagHtml = (e.tags||[]).map(tid=>{
+      const t=TAGS.find(x=>x.id===tid);
+      return t?`<span class="history-tag" style="background:${t.bg};color:${t.color};border:1px solid ${t.color}44">${t.icon}${t.label}</span>`:"";
+    }).join("");
+
+    return `<div class="history-item ${isToday?"today":""}">
+      <div class="history-header">
+        <div class="history-score" style="color:${SCORE_COLORS[e.score]}">${SCORE_EMOJI[e.score]} ${e.score}</div>
+        <div class="history-info">
+          <div class="history-word">${SCORE_LABELS[e.score]}</div>
+          <div class="history-date">${e.date}${isToday?" · 今天":""}</div>
+        </div>
+        ${e.aiMood?`<div class="history-emotion">${e.aiMood.emotion}</div>`:""}
+      </div>
+      ${tagHtml?`<div class="history-tags">${tagHtml}</div>`:""}
+      ${e.note?`<div class="history-note">${e.note}${e.aiMood?.reply?`<div class="history-ai-reply">✨ ${e.aiMood.reply}</div>`:""}</div>`:""}
+    </div>`;
+  }).join("");
+
+  document.getElementById("scroll-area").innerHTML = html;
+}
+
+// ===== 初始化 =====
+loadData();
+render();
+
+// 预加载今天已有的记录到表单
+window.addEventListener("DOMContentLoaded", () => {
+  const todayEntry = entries.find(e=>e.date===today());
+  if (todayEntry) {
+    formState.score = todayEntry.score;
+    formState.tags = [...(todayEntry.tags||[])];
+    formState.note = todayEntry.note || "";
+    formState.aiMood = todayEntry.aiMood || null;
+  }
+});
+</script>
+</body>
+</html>
